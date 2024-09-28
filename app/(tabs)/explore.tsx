@@ -1,102 +1,152 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, Image, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Dimensions} from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import mime from 'mime';
+import { Platform } from 'react-native';
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const UploadScreen = () => {
+  const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
 
-export default function TabTwoScreen() {
+  // Function to pick a file
+  const pickFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*', // Allow all file types
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Set the selected file (DocumentPickerAsset)
+        setSelectedFile(result.assets[0]);
+      } else {
+        console.log("File picking was canceled.");
+        setSelectedFile(null); // Reset state if canceled
+      }
+    } catch (error) {
+      console.error('Error picking file:', error);
+      setSelectedFile(null); // Handle error by resetting state
+    }
+  };
+
+  const uploadFile = async () => {
+    if (!selectedFile) return;
+    let fileInfo;
+    if (Platform.OS !== 'web') {
+      fileInfo = await FileSystem.getInfoAsync(selectedFile.uri);
+    } else {
+      fileInfo = {
+        uri: selectedFile.uri,
+        name: selectedFile.name || 'unknown_file',
+      };
+    }
+
+    const fileExtension = selectedFile.name.split('.').pop() || ''; // Get file extension
+    const mimeType = mime.getType(fileExtension) || 'application/octet-stream'; // Get MIME type based on file extension
+
+    const file = {
+      uri: Platform.OS === 'android' ? selectedFile.uri : selectedFile.uri.replace('file://', ''),
+      name: selectedFile.name || 'unknown_file',
+      type: mimeType,
+    };
+
+    const formData = new FormData();
+        formData.append("file", {
+          uri: file.uri,
+          type: file.type,
+          name: file.name,
+        } as any);
+        const fileContent = ''
+        formData.append("file_data", fileContent);
+
+        //addLog(`FormData created`);
+  
+        // Send request to server
+        //addLog("Sending request to server...");
+        try{
+          const response = await fetch("http://192.168.1.6:8000/convert-to-pdf", {
+            method: "POST",
+            body: formData,
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+        } catch (error)
+        {
+          console.log('Error uploading file:', error);
+        }
+
+        
+  
+        //addLog(`Response received: ${response.status}`);
+  
+        // if (!response.ok) {
+        //   const errorText = await response.text();
+        //   throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        // }
+        // const blob = await response.blob();
+        // const filePath = `${FileSystem.documentDirectory}converted_file.pdf`;
+        // await FileSystem.writeAsStringAsync(filePath, await blobToBase64(blob), {
+        //   encoding: FileSystem.EncodingType.Base64,
+        // });
+        
+
+    // if (file.type.startsWith('image/')) {
+    //   // File is an image
+    //   const response = await fetch(file.uri);
+    //   const blob = await response.blob();
+
+    //   const { data, error } = await supabase.storage
+    //     .from('your_bucket_name')
+    //     .upload(`images/${file.name}`, blob);
+
+    //   if (error) {
+    //     console.error('Error uploading image:', error.message);
+    //   } else {
+    //     console.log('Image uploaded successfully:', data);
+    //     // You can now save the URL to your database or perform other operations
+    //   }
+    // } else if (file.type === 'application/pdf') {
+    //   // File is a PDF
+    //   const { data, error } = await supabase.storage
+    //     .from('your_bucket_name')
+    //     .upload(`documents/${file.name}`, file);
+
+    //   if (error) {
+    //     console.error('Error uploading PDF file:', error.message);
+    //   } else {
+    //     console.log('PDF file uploaded successfully:', data);
+    //     // You can now save the URL to your database or perform other operations
+    //   }
+    // } else {
+    //   console.error('Unsupported file type:', file.type);
+    // }
+  };
+
+  const dimension = Dimensions.get("window");
+  const Width = dimension.width;
+  const Height = dimension.height;
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={<Ionicons size={310} name="code-slash" style={styles.headerImage} />}>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user's current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText> library
-          to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
-  );
-}
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F5F5' }}>
+      {selectedFile && <Text>{selectedFile.name}</Text>}
 
-const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-});
+      <TouchableOpacity
+        style={{ flexDirection: 'row',marginTop: '10%', width: '90%',height: 52, alignItems: 'center', justifyContent: 'center', alignContent: 'center', backgroundColor: '#007BFF', padding: 10, borderRadius: 15, marginBottom: 20 }}
+        onPress={pickFile}
+      >
+        <MaterialCommunityIcons name="file-document" size={24} color="white" style={{ marginRight: 10 }} />
+        <Text style={{ color: 'white' }}>Choose File</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={{ flexDirection: 'row',width: '90%', height: 52, alignItems: 'center', justifyContent: 'center', alignContent: 'center', backgroundColor: '#5cb85c', padding: 10, borderRadius: 15 }}
+        onPress={uploadFile}
+      >
+        <MaterialCommunityIcons name="upload" size={24} color="white" style={{ marginRight: 10 }} />
+        <Text style={{ color: 'white' }}>Upload File</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+export default UploadScreen;
