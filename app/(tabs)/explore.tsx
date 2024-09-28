@@ -64,7 +64,7 @@ const UploadScreen = () => {
         // Send request to server
         //addLog("Sending request to server...");
         try{
-          const response = await fetch("http://192.168.1.6:8000/convert-to-pdf", {
+          const response = await fetch("http://"Your IP Adress":8000/convert-to-pdf", {
             method: "POST",
             body: formData,
             headers: {
